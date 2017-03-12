@@ -5,11 +5,28 @@ import argparse
 import requests
 
 
-def get_genome(genome_id):
-
+def get_genome(parameters):
+    genome_url= "data_url/genome_sequence/?eq(genome_id,gid)&limit(25000)".replace("data_url",parameters["data_url"]).replace("gid",parameters["gid"])
+    print genome_url
+    headers = {"accept":"application/sralign+dna+fasta"}
+    #print "switch THE HEADER BACK!"
+    #headers = {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'}
+    req = requests.Request('GET', genome_url, headers=headers)
+    prepared = req.prepare()
+    #pretty_print_POST(prepared)
+    s = requests.Session()
+    response=s.send(prepared)
+    handle = open(os.path.join(parameters["output_dir"],parameters["gid"]+".fna"), 'w')
+    if not response.ok:
+        sys.stderr.write("API not responding. Please try again later.\n")
+        sys.exit(2)
+    else:
+        for block in response.iter_content(1024):
+            handle.write(block)
 
 def get_annotation(parameters):
     annotation_url= "data_url/genome_feature/?and(eq(genome_id,gid),eq(annotation,PATRIC),or(eq(feature_type,CDS),eq(feature_type,tRNA),eq(feature_type,rRNA)))&limit(25000)".replace("data_url",parameters["data_url"]).replace("gid",parameters["gid"])
+    print annotation_url
     headers = {"accept":"application/cufflinks+gff"}
     #print "switch THE HEADER BACK!"
     #headers = {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'}
@@ -18,23 +35,28 @@ def get_annotation(parameters):
     #pretty_print_POST(prepared)
     s = requests.Session()
     response=s.send(prepared)
+    handle = open(os.path.join(parameters["output_dir"],parameters["gid"]+".gff"), 'w')
     if not response.ok:
         sys.stderr.write("API not responding. Please try again later.\n")
         sys.exit(2)
+    else:
+        for block in response.iter_content(1024):
+            handle.write(block)
 
 
 def main(genome_list, library_dict, parameters_file, output_dir, gene_matrix=False):
+    print "testing"
 
 if __name__ == "__main__":
     #modelling input parameters after rockhopper
     parser = argparse.ArgumentParser()
-    parser.add_argument('-g', help='csv list of directories each containing a genome file *.fna and annotation *.gff', required=True)
-    parser.add_argument('-L', help='csv list of library names for comparison', required=False)
-    parser.add_argument('-p', help='JSON formatted parameter list for tuxedo suite keyed to program', required=False)
+    parser.add_argument('-g', help='genome ids to get *.fna and annotation *.gff', required=True)
+    parser.add_argument('-L', help='csv list of library names for comparison', required=True)
+    parser.add_argument('-p', help='JSON formatted parameter list for TRANSIT keyed to program', required=True)
     parser.add_argument('-o', help='output directory. defaults to current directory.', required=False)
     #parser.add_argument('-x', action="store_true", help='run the gene matrix conversion and create a patric expression object', required=False)
     parser.add_argument('readfiles', nargs='+', help="whitespace sep list of read files. shoudld be \
-            in corresponding order as library list. ws separates libraries,\
+            ws separates control (first) from experiment files (second),\
             a comma separates replicates, and a percent separates pairs.")
     if len(sys.argv) ==1:
         parser.print_help()

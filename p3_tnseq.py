@@ -3,7 +3,7 @@ import os, sys
 import argparse
 import requests
 import json
-
+import subprocess
 
 def get_genome(parameters):
     target_file = os.path.join(parameters["output_path"],parameters["gid"]+".fna")

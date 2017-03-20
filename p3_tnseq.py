@@ -86,7 +86,7 @@ def run_alignment(genome_list, library_dict, parameters):
             #    subprocess.call(["mkdir","-p",target_dir])
                 cur_cmd=list(cmd)
                 if "read2" in r:
-                    cur_cmd+=["-reads1",r["read1"]," -reads2",r["read2"]]
+                    cur_cmd+=["-reads1",r["read1"],"-reads2",r["read2"]]
                     name1=os.path.splitext(os.path.basename(r["read1"]))[0]
                     name2=os.path.splitext(os.path.basename(r["read2"]))[0]
                     key_handle.write("\t".join([name1,name2,result_name])+"\n")

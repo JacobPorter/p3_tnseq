@@ -96,7 +96,7 @@ def run_alignment(genome_list, library_dict, parameters):
                     name1=os.path.splitext(os.path.basename(r["read1"]))[0]
                     key_handle.write("\t".join([name1,result_name])+"\n")
                     base_name=os.path.join(target_dir,result_name)
-                sam_file = result_name+".sam"
+                sam_file = base_name+".sam"
                 cur_cleanup.append(sam_file)
                 bam_file=sam_file[:-4]+".bam"
                 r[genome["genome"]]={}

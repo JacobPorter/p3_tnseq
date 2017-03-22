@@ -65,7 +65,7 @@ def run_transit(genome_list, library_dict, parameters):
     contrasts=parameters["contrasts"]
     output_path=parameters["output_path"]
     for genome in genome_list:
-        cmd=["transit", parameters["recipe"], genome["annotation"]]
+        cmd=["transit", parameters["recipe"]]
         for contrast in contrasts:
             output_file=os.path.join(output_path, "_".join([parameters["recipe"]]+contrast)+"_transit.txt")
             cur_cmd=list(cmd) #make a copy
@@ -73,11 +73,11 @@ def run_transit(genome_list, library_dict, parameters):
             exp_files=[]
             condition=contrast[0]
             for r in library_dict[condition]["replicates"]:
-                control_files.append(r["wig"])
+                control_files.append(r[genome["genome"]]["wig"])
             if len(contrast) == 2:
                 condition= contrast[1]
                 for r in library_dict[condition]["replicates"]:
-                    exp_files.append(r["wig"])
+                    exp_files.append(r[genome["genome"]]["wig"])
             if len(control_files) > 0:
                 cur_cmd.append(",".join(control_files))
             else:
@@ -89,6 +89,7 @@ def run_transit(genome_list, library_dict, parameters):
                 else:
                     sys.stderr.write("Missing exp files for "+parameters["recipe"])
                     sys.exit(2)
+            cur_cmd.append(genome["annotation"])
             cur_cmd.append(output_file)
             print " ".join(cur_cmd)
             subprocess.check_call(cur_cmd) #call transit
@@ -161,7 +162,8 @@ def run_alignment(genome_list, library_dict, parameters):
                     #subprocess.check_call('samtools view -S -b %s > %s' % (sam_file, bam_file+".tmp"), shell=True)
                     #subprocess.check_call('samtools sort %s %s' % (bam_file+".tmp", bam_file), shell=True)
                 for garbage in cur_cleanup:
-                    subprocess.call(["rm", garbage])
+                    if os.path.exists(garbage):
+                        subprocess.call(["rm", garbage])
         key_handle.close()
         for garbage in final_cleanup:
             subprocess.call(["rm", garbage])

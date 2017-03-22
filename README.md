@@ -1,6 +1,6 @@
 Takes JSON. constructs PATRIC tn-seq run using TRANSIT
 
-
+```
 usage: p3_tnseq.py [-h] (--jfile JFILE | --jstring JSTRING)
                    (--sfile SFILE | --sstring SSTRING) [-o O]
 
@@ -14,4 +14,4 @@ optional arguments:
   --sfile SFILE      server setup JSON file
   --sstring SSTRING  server setup JSON string
   -o O               output directory. defaults to current directory.
-
+```

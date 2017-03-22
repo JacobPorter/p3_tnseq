@@ -236,9 +236,9 @@ def main(server_setup, job_data):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     jobinfo = parser.add_mutually_exclusive_group(required=True)
-    jobinfo.add_argument('--jfile', 
+    jobinfo.add_argument('--ufile', 
             help='json file for job {"reference_genome_id":[x],"experimental_conditions":[x], "transit_params":{key:value}, "output_path":x, "read_files":x')
-    jobinfo.add_argument('--jstring', help='json string from user input')
+    jobinfo.add_argument('--ustring', help='json string from user input')
     serverinfo = parser.add_mutually_exclusive_group(required=True)
     serverinfo.add_argument('--sfile', help='server setup JSON file')
     serverinfo.add_argument('--sstring', help='server setup JSON string')
@@ -266,5 +266,7 @@ if __name__ == "__main__":
     except:
         sys.stderr.write("Failed to parse server data\n")
         raise
+    if 'data_api' in server_setup and (not 'data_url' in server_setup) :
+        server_setup['data_url']=server_setup['data_api']
     job_data["output_path"]=args.o 
     main(server_setup, job_data)

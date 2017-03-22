@@ -86,13 +86,22 @@ def run_alignment(genome_list, library_dict, parameters):
             #    subprocess.call(["mkdir","-p",target_dir])
                 cur_cmd=list(cmd)
                 if "read2" in r:
-                    cur_cmd+=["-reads1",r["read1"],"-reads2",r["read2"]]
+                    read_link1=os.path.join(output_path, os.path.basename(r["read1"]))
+                    read_link2=os.path.join(output_path, os.path.basename(r["read2"]))
+                    if not os.path.exists(read_link1):
+                        subprocess.check_call(["ln","-s",r["read1"],read_link1])
+                    if not os.path.exists(read_link2):
+                        subprocess.check_call(["ln","-s",r["read2"],read_link2])
+                    cur_cmd+=["-reads1",read_link1,"-reads2",read_link2]
                     name1=os.path.splitext(os.path.basename(r["read1"]))[0]
                     name2=os.path.splitext(os.path.basename(r["read2"]))[0]
                     key_handle.write("\t".join([name1,name2,result_name])+"\n")
                     base_name=os.path.join(target_dir,result_name)
                 else:
-                    cur_cmd+=["-reads1",r["read1"]]
+                    read_link1=os.path.join(output_path, os.path.basename(r["read1"]))
+                    if not os.path.exists(read_link1):
+                        subprocess.check_call(["ln","-s",r["read1"],read_link1])
+                    cur_cmd+=["-reads1",read_link1]
                     name1=os.path.splitext(os.path.basename(r["read1"]))[0]
                     key_handle.write("\t".join([name1,result_name])+"\n")
                     base_name=os.path.join(target_dir,result_name)

@@ -66,7 +66,7 @@ def run_transit(genome_list, library_dict, parameters):
     output_path=parameters["output_path"]
     for genome in genome_list:
         cmd=["transit", parameters["recipe"], genome["annotation"]]
-        for contrast in constrasts:
+        for contrast in contrasts:
             output_file=os.path.join(output_path, "_".join([parameters["recipe"]]+contrast)+"_transit.txt")
             cur_cmd=list(cmd) #make a copy
             control_files=[]

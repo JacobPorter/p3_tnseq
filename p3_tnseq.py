@@ -90,6 +90,7 @@ def run_transit(genome_list, library_dict, parameters):
                     sys.stderr.write("Missing exp files for "+parameters["recipe"])
                     sys.exit(2)
             cur_cmd.append(output_file)
+            print " ".join(cur_cmd)
             subprocess.check_call(cur_cmd) #call transit
         
 
@@ -152,7 +153,7 @@ def run_alignment(genome_list, library_dict, parameters):
                 if os.path.exists(bam_file):
                     sys.stderr.write(bam_file+" alignments file already exists. skipping\n")
                 else:
-                    print cur_cmd
+                    print " ".join(cur_cmd)
                     subprocess.check_call(cur_cmd) #call bowtie2
                 if not os.path.exists(bam_file):
                     subprocess.check_call("samtools view -Su "+sam_file+" | samtools sort -o - - > "+bam_file, shell=True)#convert to bam

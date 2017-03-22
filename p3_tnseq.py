@@ -58,6 +58,42 @@ def get_files(job_data, server_data):
         get_genome(job_data)
     return genome_dirs
 
+#contrasts are always defined as either [control,treatment] or [control]
+#run transit per contrast
+#when allow UI definition of conditions and contrasts will need to clean up names for file friendliness
+def run_transit(genome_list, library_dict, parameters):
+    contrasts=parameters["contrasts"]
+    output_path=parameters["output_path"]
+    for genome in genome_list:
+        cmd=["transit", parameters["recipe"], genome["annotation"]]
+        for contrast in constrasts:
+            output_file=os.path.join(output_path, "_".join([parameters["recipe"]]+contrast)+"_transit.txt")
+            cur_cmd=list(cmd) #make a copy
+            control_files=[]
+            exp_files=[]
+            condition=contrast[0]
+            for r in library_dict[condition]["replicates"]:
+                control_files.append(r["wig"])
+            if len(contrast) == 2:
+                condition= contrast[1]
+                for r in library_dict[condition]["replicates"]:
+                    exp_files.append(r["wig"])
+            if len(control_files) > 0:
+                cur_cmd.append(",".join(control_files))
+            else:
+                sys.stderr.write("Missing control files for "+parameters["recipe"])
+                sys.exit(2)
+            if parameters["recipe"]=="resampling":
+                if len(exp_files) > 0:
+                    cur_cmd.append(",".join(exp_files))
+                else:
+                    sys.stderr.write("Missing exp files for "+parameters["recipe"])
+                    sys.exit(2)
+            cur_cmd.append(output_file)
+            subprocess.check_call(cur_cmd) #call transit
+        
+
+
 def run_alignment(genome_list, library_dict, parameters): 
     #modifies library_dict sub replicates to include 'bowtie' dict recording output files
     output_path=parameters["output_path"]
@@ -106,10 +142,12 @@ def run_alignment(genome_list, library_dict, parameters):
                     key_handle.write("\t".join([name1,result_name])+"\n")
                     base_name=os.path.join(target_dir,result_name)
                 sam_file = base_name+".sam"
+                wig_file = base_name+".wig"
                 cur_cleanup.append(sam_file)
                 bam_file=sam_file[:-4]+".bam"
                 r[genome["genome"]]={}
                 r[genome["genome"]]["bam"]=bam_file
+                r[genome["genome"]]["wig"]=wig_file
                 cur_cmd+=["-output",base_name]
                 if os.path.exists(bam_file):
                     sys.stderr.write(bam_file+" alignments file already exists. skipping\n")
@@ -129,7 +167,7 @@ def run_alignment(genome_list, library_dict, parameters):
 
 
 def main(server_setup, job_data):
-    required_data=["experimental_conditions","read_files","reference_genome_id", "recipe"]
+    required_data=["experimental_conditions","read_files","reference_genome_id", "recipe", "contrasts"]
     for data in required_data:
         if not data in job_data or len(job_data[data]) == 0:
             sys.stderr.write("Missing "+ data +"\n")
@@ -189,7 +227,7 @@ def main(server_setup, job_data):
     if not os.path.exists(output_path):
         subprocess.call(["mkdir","-p",output_path])
     run_alignment(genome_list, library_dict, job_data)
-    #run_transit(genome_list, library_dict, parameters, output_path)
+    run_transit(genome_list, library_dict, job_data)
     #cleanup(genome_list, library_dict, parameters, output_path)
 
 if __name__ == "__main__":

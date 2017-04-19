@@ -64,10 +64,26 @@ def get_files(job_data, server_data):
 def run_transit(genome_list, library_dict, parameters):
     contrasts=parameters["contrasts"]
     output_path=parameters["output_path"]
+
+    #
+    # Verify recipe is valid. From transite command line help.
+    #
+    valid_recipes = { 'griffin': 1,
+                      'tn5gaps': 1,
+                      'rankproduct': 1,
+                      'hmm': 1,
+                      'binomial': 1,
+                      'gumbel': 1,
+                      'resampling': 1 }
+    recipe = parameters["recipe"]
+    if not valid_recipes[recipe]:
+        sys.stderr.write("Invalid recipe " + recipe)
+        sys.exit(2)
+        
     for genome in genome_list:
-        cmd=["transit", parameters["recipe"]]
+        cmd=["transit", recipe]
         for contrast in contrasts:
-            output_file=os.path.join(output_path, "_".join([parameters["recipe"]]+contrast)+"_transit.txt")
+            output_file=os.path.join(output_path, "_".join([recipe]+contrast)+"_transit.txt")
             cur_cmd=list(cmd) #make a copy
             control_files=[]
             exp_files=[]
@@ -81,13 +97,13 @@ def run_transit(genome_list, library_dict, parameters):
             if len(control_files) > 0:
                 cur_cmd.append(",".join(control_files))
             else:
-                sys.stderr.write("Missing control files for "+parameters["recipe"])
+                sys.stderr.write("Missing control files for "+recipe)
                 sys.exit(2)
-            if parameters["recipe"]=="resampling":
+            if recipe=="resampling":
                 if len(exp_files) > 0:
                     cur_cmd.append(",".join(exp_files))
                 else:
-                    sys.stderr.write("Missing exp files for "+parameters["recipe"])
+                    sys.stderr.write("Missing exp files for "+recipe)
                     sys.exit(2)
             cur_cmd.append(genome["annotation"])
             cur_cmd.append(output_file)
@@ -157,8 +173,20 @@ def run_alignment(genome_list, library_dict, parameters):
                     print " ".join(cur_cmd)
                     subprocess.check_call(cur_cmd) #call bowtie2
                 if not os.path.exists(bam_file):
-                    subprocess.check_call("samtools view -Su "+sam_file+" | samtools sort -o - - > "+bam_file, shell=True)#convert to bam
-                    subprocess.check_call("samtools index "+bam_file, shell=True)
+                    #subprocess.check_call("samtools view -Su "+sam_file+" | samtools sort -o - - > "+bam_file, shell=True)#convert to bam
+                    bam_out = open(bam_file, "w")
+                    p1 = subprocess.Popen(["samtools", "view", "-Su", sam_file], stdout=subprocess.PIPE)
+                    p2 = subprocess.Popen(["samtools", "sort", "-o", "-", "-"], stdout=bam_out, stdin=p1.stdout)
+                    p1.stdout.close()
+                    output = p2.communicate()
+                    bam_out.close()
+                    print "pipeline done " + str(output)
+                    p1_stat = p1.wait()
+                    p2_stat = p2.wait()
+                    print "view status = %d" % p1_stat
+                    print "sort status = %d" % p2_stat
+                    
+                    subprocess.check_call(["samtools", "index", bam_file])
                     #subprocess.check_call('samtools view -S -b %s > %s' % (sam_file, bam_file+".tmp"), shell=True)
                     #subprocess.check_call('samtools sort %s %s' % (bam_file+".tmp", bam_file), shell=True)
                 for garbage in cur_cleanup:
@@ -175,6 +203,7 @@ def main(server_setup, job_data):
         if not data in job_data or len(job_data[data]) == 0:
             sys.stderr.write("Missing "+ data +"\n")
             sys.exit(2)
+    print job_data
     
     library_dict={}
     library_list=[]

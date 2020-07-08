@@ -9,7 +9,7 @@ def get_genome(parameters):
     target_file = os.path.join(parameters["output_path"],parameters["gid"]+".fna")
     if not os.path.exists(target_file):
         genome_url= "data_url/genome_sequence/?eq(genome_id,gid)&limit(25000)".replace("data_url",parameters["data_url"]).replace("gid",parameters["gid"])
-        print genome_url
+        print(genome_url)
         headers = {"accept":"application/sralign+dna+fasta"}
         #print "switch THE HEADER BACK!"
         #headers = {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'}
@@ -31,7 +31,7 @@ def get_annotation(parameters):
     target_file =os.path.join(parameters["output_path"],parameters["gid"]+".gff")
     if not os.path.exists(target_file):
         annotation_url= "data_url/genome_feature/?and(eq(genome_id,gid),eq(annotation,PATRIC),or(eq(feature_type,CDS),eq(feature_type,tRNA),eq(feature_type,rRNA)))&limit(25000)".replace("data_url",parameters["data_url"]).replace("gid",parameters["gid"])
-        print annotation_url
+        print(annotation_url)
         headers = {"accept":"application/cufflinks+gff"}
         #print "switch THE HEADER BACK!"
         #headers = {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'}
@@ -107,7 +107,7 @@ def run_transit(genome_list, library_dict, parameters):
                     sys.exit(2)
             cur_cmd.append(genome["annotation"])
             cur_cmd.append(output_file)
-            print " ".join(cur_cmd)
+            print(" ".join(cur_cmd))
             subprocess.check_call(cur_cmd) #call transit
         
 
@@ -170,7 +170,7 @@ def run_alignment(genome_list, library_dict, parameters):
                 if os.path.exists(bam_file):
                     sys.stderr.write(bam_file+" alignments file already exists. skipping\n")
                 else:
-                    print " ".join(cur_cmd)
+                    print(" ".join(cur_cmd))
                     subprocess.check_call(cur_cmd) #call bowtie2
                 if not os.path.exists(bam_file):
                     #subprocess.check_call("samtools view -Su "+sam_file+" | samtools sort -o - - > "+bam_file, shell=True)#convert to bam
@@ -180,11 +180,11 @@ def run_alignment(genome_list, library_dict, parameters):
                     p1.stdout.close()
                     output = p2.communicate()
                     bam_out.close()
-                    print "pipeline done " + str(output)
+                    print("pipeline done " + str(output))
                     p1_stat = p1.wait()
                     p2_stat = p2.wait()
-                    print "view status = %d" % p1_stat
-                    print "sort status = %d" % p2_stat
+                    print("view status = %d" % p1_stat)
+                    print("sort status = %d" % p2_stat)
                     
                     subprocess.check_call(["samtools", "index", bam_file])
                     #subprocess.check_call('samtools view -S -b %s > %s' % (sam_file, bam_file+".tmp"), shell=True)
@@ -203,7 +203,7 @@ def main(server_setup, job_data):
         if not data in job_data or len(job_data[data]) == 0:
             sys.stderr.write("Missing "+ data +"\n")
             sys.exit(2)
-    print job_data
+    print(job_data)
     
     library_dict={}
     library_list=[]

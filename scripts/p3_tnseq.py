@@ -167,6 +167,7 @@ def run_alignment(genome_list, library_dict, parameters):
                 r[genome["genome"]]["bam"]=bam_file
                 r[genome["genome"]]["wig"]=wig_file
                 cur_cmd+=["-output",base_name]
+                cur_cmd+=["-protocol",parameters["protocol"],"-primer",parameters["primer"]]
                 if os.path.exists(bam_file):
                     sys.stderr.write(bam_file+" alignments file already exists. skipping\n")
                 else:
@@ -198,15 +199,26 @@ def run_alignment(genome_list, library_dict, parameters):
 
 
 def main(server_setup, job_data):
-    required_data=["experimental_conditions","read_files","reference_genome_id", "recipe", "contrasts"]
+    required_data=["experimental_conditions","read_files","reference_genome_id", "recipe", "contrasts", "protocol"]
+    fail = False
     for data in required_data:
         if not data in job_data or len(job_data[data]) == 0:
             sys.stderr.write("Missing "+ data +"\n")
-            sys.exit(2)
+            fail = True
+    if "primer" not in job_data:
+        sys.stderr.write("The primer string does not exist.\n")
+        fail = True
+    else:
+        primer_string = job_data["primer"].upper()
+        job_data["primer"] = primer_string
+        for char in primer_string:
+            if char not in ["A", "C", "T", "G", "N"]:
+                sys.stderr.write("The primer is not a DNA string.\n")
+                fail = True
+    # Could validate that the recipe and protocol make sense.
     print(job_data)
-    
-    library_dict={}
-    library_list=[]
+    if fail:
+        sys.exit(2)
     library_list=job_data["experimental_conditions"]
     output_path=job_data["output_path"]=os.path.abspath(job_data["output_path"])
     #for lib in library_list:
@@ -252,8 +264,6 @@ def main(server_setup, job_data):
         #        sys.exit(2)
         #    else:
         #        cur_genome["hisat_index"]=cur_genome["hisat_index"][0]
-
-
         genome_list.append(cur_genome)
     output_path=os.path.abspath(output_path)
     if not os.path.exists(output_path):

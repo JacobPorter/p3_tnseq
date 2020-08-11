@@ -18,21 +18,33 @@ def get_genome(parameters):
         #pretty_print_POST(prepared)
         s = requests.Session()
         response=s.send(prepared)
-        handle = open(target_file, 'w')
+        handle = open(target_file, 'wb')
         if not response.ok:
             sys.stderr.write("API not responding. Please try again later.\n")
             sys.exit(2)
-        else:
-            for block in response.iter_content(1024):
-                handle.write(block)
-    return target_file
+        for block in response.iter_content(1024):
+            handle.write(block)
+        handle.close()
+#         copy_file = os.path.join(parameters["output_path"],parameters["gid"]+"_2"+".fna")
+        contig_ids = []
+#         with open(copy_file, "w") as sink_file:
+        with open(target_file, "r") as source_file:
+            for line in source_file:
+                if line.startswith(">"):
+                    line = line.split()[0] + "\n"
+                    contig_ids.append(line[1:].strip())
+#                     sink_file.write(line)
+#         os.remove(target_file)
+#         os.rename(copy_file, target_file)
+    return target_file, contig_ids
 
 def get_annotation(parameters):
     target_file =os.path.join(parameters["output_path"],parameters["gid"]+".gff")
     if not os.path.exists(target_file):
         annotation_url= "data_url/genome_feature/?and(eq(genome_id,gid),eq(annotation,PATRIC),or(eq(feature_type,CDS),eq(feature_type,tRNA),eq(feature_type,rRNA)))&limit(25000)".replace("data_url",parameters["data_url"]).replace("gid",parameters["gid"])
         print(annotation_url)
-        headers = {"accept":"application/cufflinks+gff"}
+        headers = {"accept":"application/gff"}
+        # headers = {"accept":"application/cufflinks+gff"}
         #print "switch THE HEADER BACK!"
         #headers = {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'}
         req = requests.Request('GET', annotation_url, headers=headers)
@@ -40,7 +52,7 @@ def get_annotation(parameters):
         #pretty_print_POST(prepared)
         s = requests.Session()
         response=s.send(prepared)
-        handle = open(target_file, 'w')
+        handle = open(target_file, 'wb')
         if not response.ok:
             sys.stderr.write("API not responding. Please try again later.\n")
             sys.exit(2)
@@ -53,10 +65,12 @@ def get_files(job_data, server_data):
     genome_dirs=[job_data["output_path"]]
     job_data["data_url"]=server_data["data_url"]
     job_data["gid"]=job_data["reference_genome_id"]
-    for g in [job_data["reference_genome_id"]]:
+    contig_ids = []
+    for _ in [job_data["reference_genome_id"]]:
         get_annotation(job_data)
-        get_genome(job_data)
-    return genome_dirs
+        _, iterm_ids = get_genome(job_data)
+        contig_ids += iterm_ids
+    return genome_dirs, contig_ids
 
 #contrasts are always defined as either [control,treatment] or [control]
 #run transit per contrast
@@ -112,16 +126,24 @@ def run_transit(genome_list, library_dict, parameters):
         
 
 
-def run_alignment(genome_list, library_dict, parameters): 
+def run_alignment(genome_list, library_dict, parameters, contig_ids): 
     #modifies library_dict sub replicates to include 'bowtie' dict recording output files
     output_path=parameters["output_path"]
     key_handle=open(os.path.join(parameters["output_path"],"output_keys.txt"), 'w')
+    contig_ids_str = ",".join(contig_ids)
     for genome in genome_list:
         genome_link=os.path.join(output_path, os.path.basename(genome["genome"]))
         final_cleanup=[]
         if not os.path.exists(genome_link):
             subprocess.check_call(["ln","-s",genome["genome"],genome_link])
-        cmd=["tpp", "-bwa", "bwa", "-ref", genome["genome"]]
+        
+        bwa_loc = str(subprocess.run(["which", "bwa"], capture_output=True).stdout, 'utf-8').strip()
+        if bwa_loc.startswith("which"):
+            raise LookupError
+        sys.stderr.write("Using BWA located at: {}\n".format(bwa_loc))
+        sys.stderr.flush()
+        # bwa_loc = "/opt/patric-common/runtime/bin/bwa"
+        cmd=["tpp", "-bwa", bwa_loc, "-ref", genome["genome"]]
         #thread_count=multiprocessing.cpu_count()
         #cmd+=["-p",str(thread_count)]
         #if genome["dir"].endswith('/'):
@@ -167,12 +189,12 @@ def run_alignment(genome_list, library_dict, parameters):
                 r[genome["genome"]]["bam"]=bam_file
                 r[genome["genome"]]["wig"]=wig_file
                 cur_cmd+=["-output",base_name]
-                cur_cmd+=["-protocol",parameters["protocol"],"-primer",parameters["primer"]]
+                cur_cmd+=["-protocol",parameters["protocol"],"-primer",parameters["primer"], "-replicon-ids", contig_ids_str]
                 if os.path.exists(bam_file):
                     sys.stderr.write(bam_file+" alignments file already exists. skipping\n")
                 else:
                     print(" ".join(cur_cmd))
-                    subprocess.check_call(cur_cmd) #call bowtie2
+                    subprocess.check_call(cur_cmd)
                 if not os.path.exists(bam_file):
                     #subprocess.check_call("samtools view -Su "+sam_file+" | samtools sort -o - - > "+bam_file, shell=True)#convert to bam
                     bam_out = open(bam_file, "w")
@@ -219,7 +241,7 @@ def main(server_setup, job_data):
     print(job_data)
     if fail:
         sys.exit(2)
-    library_list=job_data["experimental_conditions"]
+    # library_list=job_data["experimental_conditions"]
     output_path=job_data["output_path"]=os.path.abspath(job_data["output_path"])
     #for lib in library_list:
     #    library_dict[lib]={"library":lib}
@@ -238,7 +260,7 @@ def main(server_setup, job_data):
     #    count+=1
    
     library_dict = job_data["read_files"] 
-    genome_dirs=get_files(job_data, server_setup)
+    genome_dirs, contig_ids = get_files(job_data, server_setup)
     genome_list=[]
     for g in genome_dirs:
         cur_genome={"genome":[],"annotation":[],"dir":g,"hisat_index":[]}
@@ -268,7 +290,7 @@ def main(server_setup, job_data):
     output_path=os.path.abspath(output_path)
     if not os.path.exists(output_path):
         subprocess.call(["mkdir","-p",output_path])
-    run_alignment(genome_list, library_dict, job_data)
+    run_alignment(genome_list, library_dict, job_data, contig_ids)
     run_transit(genome_list, library_dict, job_data)
     #cleanup(genome_list, library_dict, parameters, output_path)
 

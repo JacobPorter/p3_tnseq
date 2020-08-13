@@ -75,12 +75,11 @@ def get_files(job_data, server_data):
 #contrasts are always defined as either [control,treatment] or [control]
 #run transit per contrast
 #when allow UI definition of conditions and contrasts will need to clean up names for file friendliness
-def run_transit(genome_list, library_dict, parameters):
+def run_transit(genome_list, library_dict, parameters, contig_ids):
     contrasts=parameters["contrasts"]
     output_path=parameters["output_path"]
-
     #
-    # Verify recipe is valid. From transite command line help.
+    # Verify recipe is valid. From transit command line help.
     #
     valid_recipes = { 'griffin': 1,
                       'tn5gaps': 1,
@@ -93,37 +92,46 @@ def run_transit(genome_list, library_dict, parameters):
     if not valid_recipes[recipe]:
         sys.stderr.write("Invalid recipe " + recipe)
         sys.exit(2)
-        
-    for genome in genome_list:
-        cmd=["transit", recipe]
-        for contrast in contrasts:
-            output_file=os.path.join(output_path, "_".join([recipe]+contrast)+"_transit.txt")
-            cur_cmd=list(cmd) #make a copy
-            control_files=[]
-            exp_files=[]
-            condition=contrast[0]
-            for r in library_dict[condition]["replicates"]:
-                control_files.append(r[genome["genome"]]["wig"])
-            if len(contrast) == 2:
-                condition= contrast[1]
+    for contig in contig_ids:
+        for genome in genome_list:
+            cmd=["transit", recipe]
+            for contrast in contrasts:
+                output_file=os.path.join(output_path, "_".join([recipe]+contrast)+"_"+contig+"_transit.txt")
+                cur_cmd=list(cmd) #make a copy
+                control_files=[]
+                exp_files=[]
+                condition=contrast[0]
                 for r in library_dict[condition]["replicates"]:
-                    exp_files.append(r[genome["genome"]]["wig"])
-            if len(control_files) > 0:
-                cur_cmd.append(",".join(control_files))
-            else:
-                sys.stderr.write("Missing control files for "+recipe)
-                sys.exit(2)
-            if recipe=="resampling":
-                if len(exp_files) > 0:
-                    cur_cmd.append(",".join(exp_files))
+                    control_files.append(r[genome["genome"]]["wig"][contig])
+                if len(contrast) == 2:
+                    condition= contrast[1]
+                    for r in library_dict[condition]["replicates"]:
+                        exp_files.append(r[genome["genome"]]["wig"][contig])
+                if len(control_files) > 0:
+                    cur_cmd.append(",".join(control_files))
                 else:
-                    sys.stderr.write("Missing exp files for "+recipe)
+                    sys.stderr.write("Missing control files for "+recipe)
                     sys.exit(2)
-            cur_cmd.append(genome["annotation"])
-            cur_cmd.append(output_file)
-            print(" ".join(cur_cmd))
-            subprocess.check_call(cur_cmd) #call transit
-        
+                if recipe=="resampling":
+                    if len(exp_files) > 0:
+                        cur_cmd.append(",".join(exp_files))
+                    else:
+                        sys.stderr.write("Missing exp files for "+recipe)
+                        sys.exit(2)
+                cur_cmd.append(genome["annotation"])
+                cur_cmd.append(output_file)
+                print(" ".join(cur_cmd))
+                subprocess.check_call(cur_cmd) #call transit
+
+
+def handle_gzip(file_path):
+    if file_path.endswith(".gz"):
+        if os.path.isfile(file_path):
+            subprocess.check_call(["gunzip", file_path])
+        file_path = file_path[0:len(file_path)-3]
+    sys.stderr.write("File {} has size {}.\n".format(file_path, os.path.getsize(file_path)))
+    sys.stderr.flush()
+    return file_path
 
 
 def run_alignment(genome_list, library_dict, parameters, contig_ids): 
@@ -161,6 +169,9 @@ def run_alignment(genome_list, library_dict, parameters, contig_ids):
             #    target_dir=os.path.abspath(target_dir)
             #    subprocess.call(["mkdir","-p",target_dir])
                 cur_cmd=list(cmd)
+                r["read1"] = handle_gzip(r["read1"])
+                if "read2" in r:
+                    r["read2"] = handle_gzip(r["read2"])
                 if "read2" in r:
                     read_link1=os.path.join(output_path, os.path.basename(r["read1"]))
                     read_link2=os.path.join(output_path, os.path.basename(r["read2"]))
@@ -187,7 +198,7 @@ def run_alignment(genome_list, library_dict, parameters, contig_ids):
                 bam_file=sam_file[:-4]+".bam"
                 r[genome["genome"]]={}
                 r[genome["genome"]]["bam"]=bam_file
-                r[genome["genome"]]["wig"]=wig_file
+                r[genome["genome"]]["wig"]={contig_ids[0]: wig_file} if len(contig_ids) <= 1 else {contig_id: "{}_{}.wig".format(base_name, contig_id) for contig_id in contig_ids}
                 cur_cmd+=["-output",base_name]
                 cur_cmd+=["-protocol",parameters["protocol"],"-primer",parameters["primer"], "-replicon-ids", contig_ids_str]
                 if os.path.exists(bam_file):
@@ -208,7 +219,6 @@ def run_alignment(genome_list, library_dict, parameters, contig_ids):
                     p2_stat = p2.wait()
                     print("view status = %d" % p1_stat)
                     print("sort status = %d" % p2_stat)
-                    
                     subprocess.check_call(["samtools", "index", bam_file])
                     #subprocess.check_call('samtools view -S -b %s > %s' % (sam_file, bam_file+".tmp"), shell=True)
                     #subprocess.check_call('samtools sort %s %s' % (bam_file+".tmp", bam_file), shell=True)
@@ -291,7 +301,7 @@ def main(server_setup, job_data):
     if not os.path.exists(output_path):
         subprocess.call(["mkdir","-p",output_path])
     run_alignment(genome_list, library_dict, job_data, contig_ids)
-    run_transit(genome_list, library_dict, job_data)
+    run_transit(genome_list, library_dict, job_data, contig_ids)
     #cleanup(genome_list, library_dict, parameters, output_path)
 
 if __name__ == "__main__":

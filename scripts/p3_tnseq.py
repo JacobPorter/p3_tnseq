@@ -92,36 +92,39 @@ def run_transit(genome_list, library_dict, parameters, contig_ids):
     if not valid_recipes[recipe]:
         sys.stderr.write("Invalid recipe " + recipe)
         sys.exit(2)
-    for contig in contig_ids:
-        for genome in genome_list:
-            cmd=["transit", recipe]
-            for contrast in contrasts:
-                output_file=os.path.join(output_path, "_".join([recipe]+contrast)+"_"+contig+"_transit.txt")
-                cur_cmd=list(cmd) #make a copy
-                control_files=[]
-                exp_files=[]
-                condition=contrast[0]
+#     for contig in contig_ids:
+    for genome in genome_list:
+        cmd=["transit", recipe]
+        for contrast in contrasts:
+            # output_file=os.path.join(output_path, "_".join([recipe]+contrast)+"_"+contig+"_transit.txt")
+            output_file=os.path.join(output_path, "_".join([recipe]+contrast)+"_transit.txt")
+            cur_cmd=list(cmd) #make a copy
+            control_files=[]
+            exp_files=[]
+            condition=contrast[0]
+            for r in library_dict[condition]["replicates"]:
+                # control_files.append(r[genome["genome"]]["wig"][contig])
+                control_files.append(r[genome["genome"]]["wig"])
+            if len(contrast) == 2:
+                condition= contrast[1]
                 for r in library_dict[condition]["replicates"]:
-                    control_files.append(r[genome["genome"]]["wig"][contig])
-                if len(contrast) == 2:
-                    condition= contrast[1]
-                    for r in library_dict[condition]["replicates"]:
-                        exp_files.append(r[genome["genome"]]["wig"][contig])
-                if len(control_files) > 0:
-                    cur_cmd.append(",".join(control_files))
+                    # exp_files.append(r[genome["genome"]]["wig"][contig])
+                    exp_files.append(r[genome["genome"]]["wig"])
+            if len(control_files) > 0:
+                cur_cmd.append(",".join(control_files))
+            else:
+                sys.stderr.write("Missing control files for "+recipe)
+                sys.exit(2)
+            if recipe=="resampling":
+                if len(exp_files) > 0:
+                    cur_cmd.append(",".join(exp_files))
                 else:
-                    sys.stderr.write("Missing control files for "+recipe)
+                    sys.stderr.write("Missing exp files for "+recipe)
                     sys.exit(2)
-                if recipe=="resampling":
-                    if len(exp_files) > 0:
-                        cur_cmd.append(",".join(exp_files))
-                    else:
-                        sys.stderr.write("Missing exp files for "+recipe)
-                        sys.exit(2)
-                cur_cmd.append(genome["annotation"])
-                cur_cmd.append(output_file)
-                print(" ".join(cur_cmd))
-                subprocess.check_call(cur_cmd) #call transit
+            cur_cmd.append(genome["annotation"])
+            cur_cmd.append(output_file)
+            print(" ".join(cur_cmd))
+            subprocess.check_call(cur_cmd) #call transit
 
 
 def handle_gzip(file_path):
@@ -144,7 +147,6 @@ def run_alignment(genome_list, library_dict, parameters, contig_ids):
         final_cleanup=[]
         if not os.path.exists(genome_link):
             subprocess.check_call(["ln","-s",genome["genome"],genome_link])
-        
         bwa_loc = str(subprocess.run(["which", "bwa"], capture_output=True).stdout, 'utf-8').strip()
         if bwa_loc.startswith("which"):
             raise LookupError
@@ -206,6 +208,12 @@ def run_alignment(genome_list, library_dict, parameters, contig_ids):
                 else:
                     print(" ".join(cur_cmd))
                     subprocess.check_call(cur_cmd)
+                    if len(contig_ids) > 1:
+                        cat_cmd = ["cat"] + [r[genome["genome"]]["wig"][contig] for contig in contig_ids]
+                        # cat_cmd += [">", wig_file]
+                        with open(wig_file, "w") as wig_fd:
+                            subprocess.run(cat_cmd, stdout=wig_fd)
+                r[genome["genome"]]["wig"] = wig_file
                 if not os.path.exists(bam_file):
                     #subprocess.check_call("samtools view -Su "+sam_file+" | samtools sort -o - - > "+bam_file, shell=True)#convert to bam
                     bam_out = open(bam_file, "w")
@@ -301,6 +309,8 @@ def main(server_setup, job_data):
     if not os.path.exists(output_path):
         subprocess.call(["mkdir","-p",output_path])
     run_alignment(genome_list, library_dict, job_data, contig_ids)
+    sys.stderr.write("TPP is finished.")
+    sys.stderr.flush()
     run_transit(genome_list, library_dict, job_data, contig_ids)
     #cleanup(genome_list, library_dict, parameters, output_path)
 

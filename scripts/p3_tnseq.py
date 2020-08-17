@@ -124,6 +124,7 @@ def run_transit(genome_list, library_dict, parameters, contig_ids):
             cur_cmd.append(genome["annotation"])
             cur_cmd.append(output_file)
             print(" ".join(cur_cmd))
+            sys.stdout.flush()
             subprocess.check_call(cur_cmd) #call transit
 
 
@@ -207,6 +208,7 @@ def run_alignment(genome_list, library_dict, parameters, contig_ids):
                     sys.stderr.write(bam_file+" alignments file already exists. skipping\n")
                 else:
                     print(" ".join(cur_cmd))
+                    sys.stdout.flush()
                     subprocess.check_call(cur_cmd)
                     if len(contig_ids) > 1:
                         cat_cmd = ["cat"] + [r[genome["genome"]]["wig"][contig] for contig in contig_ids]

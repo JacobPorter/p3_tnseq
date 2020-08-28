@@ -5,6 +5,10 @@ import requests
 import json
 import subprocess
 
+
+READ_LEN_SAMPLE = 10
+READ2_BARCODE = 30
+
 def get_genome(parameters):
     target_file = os.path.join(parameters["output_path"],parameters["gid"]+".fna")
     if not os.path.exists(target_file):
@@ -38,6 +42,7 @@ def get_genome(parameters):
 #         os.rename(copy_file, target_file)
     return target_file, contig_ids
 
+
 def get_annotation(parameters):
     target_file =os.path.join(parameters["output_path"],parameters["gid"]+".gff")
     if not os.path.exists(target_file):
@@ -60,6 +65,7 @@ def get_annotation(parameters):
             for block in response.iter_content(1024):
                 handle.write(block)
     return target_file
+
 
 def get_files(job_data, server_data):
     genome_dirs=[job_data["output_path"]]
@@ -142,6 +148,7 @@ def run_transit(genome_list, library_dict, parameters):
                 sys.stdout.flush()
                 subprocess.check_call(cur_cmd) #call transit
 
+
 def handle_gzip(file_path):
     if file_path.endswith(".gz"):
         if os.path.isfile(file_path):
@@ -150,6 +157,27 @@ def handle_gzip(file_path):
     sys.stderr.write("File {} has size {}.\n".format(file_path, os.path.getsize(file_path)))
     sys.stderr.flush()
     return file_path
+
+
+def read_length_estimate(file_path, primer, f_factor=0):
+    """
+    Gives an estimate of average read length after primer trimming.
+    """
+    get_next = False
+    counter = 0
+    reads = []
+    with open(file_path) as fd:
+        for line in fd:
+            if counter >= READ_LEN_SAMPLE:
+                break
+            if get_next:
+                reads.append(line.strip())
+                get_next = False
+                counter += 1
+            elif line.startswith("@") or line.startswith(">"):
+                get_next = True
+    return max(10, sum([len(r) if primer not in r else len(r)-len(primer) for r in reads])/len(reads) - f_factor)
+
 
 def run_alignment(genome_list, library_dict, parameters): 
     #modifies library_dict sub replicates to include 'bowtie' dict recording output files
@@ -187,8 +215,20 @@ def run_alignment(genome_list, library_dict, parameters):
             #    subprocess.call(["mkdir","-p",target_dir])
                 cur_cmd=list(cmd)
                 r["read1"] = handle_gzip(r["read1"])
+                r1_len = read_length_estimate(r["read1"], parameters["primer"])
+                r2_len = None
                 if "read2" in r:
                     r["read2"] = handle_gzip(r["read2"])
+                    r2_len = read_length_estimate(r["read2"], parameters["primer"], READ2_BARCODE)
+                sys.stdout.write("Approximate average reads 1 length: {}; reads 2 length: {}.\n".format(r1_len, r2_len))
+                sys.stdout.flush()
+                if r2_len is not None:
+                    r_est = (r1_len + r2_len) / 2.0
+                else:
+                    r_est = r1_len
+                alg = "mem"
+                if r_est <= 70:
+                    alg = "aln"
                 if "read2" in r:
                     read_link1=os.path.join(output_path, os.path.basename(r["read1"]))
                     read_link2=os.path.join(output_path, os.path.basename(r["read2"]))
@@ -217,7 +257,7 @@ def run_alignment(genome_list, library_dict, parameters):
                 r[genome["genome"]]["bam"]=bam_file
                 r[genome["genome"]]["wig"]={contig_ids[0]: wig_file} if len(contig_ids) <= 1 else {contig_id: "{}_{}.wig".format(base_name, contig_id) for contig_id in contig_ids}
                 cur_cmd+=["-output",base_name]
-                cur_cmd+=["-protocol",parameters["protocol"],"-primer",parameters["primer"], "-replicon-ids", contig_ids_str]
+                cur_cmd+=["-protocol",parameters["protocol"],"-bwa-alg",alg,"-primer",parameters["primer"], "-replicon-ids", contig_ids_str]
                 if os.path.exists(bam_file):
                     sys.stderr.write(bam_file+" alignments file already exists. skipping\n")
                 else:
@@ -252,6 +292,7 @@ def run_alignment(genome_list, library_dict, parameters):
         key_handle.close()
         for garbage in final_cleanup:
             subprocess.call(["rm", garbage])
+
 
 def main(server_setup, job_data):
     required_data=["experimental_conditions","read_files","reference_genome_id", "recipe", "contrasts", "protocol"]
@@ -327,6 +368,7 @@ def main(server_setup, job_data):
     sys.stderr.flush()
     run_transit(genome_list, library_dict, job_data)
     #cleanup(genome_list, library_dict, parameters, output_path)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

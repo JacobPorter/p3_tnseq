@@ -1,0 +1,47 @@
+{
+    "id": "/jsporter@patricbrc.org/home/Tn-Seq/Sassetti_ce_replicates/SRR12246702_1.fastq.gz/jsporter@patricbrc.org/home/Tn-Seq/Sassetti_ce_replicates/SRR12246702_2.fastq.gz",
+    "output_path": "/jsporter@patricbrc.org/home/Tn-Seq/Sassetti_ce_replicates",
+    "output_file": "sassetti_ce_replicates",
+    "recipe": "resampling",
+    "protocol": "sassetti",
+    "primer": "ACTTATCAGCCAACCTGTTA",
+    "reference_genome_id": "83332.12",
+    "experimental_conditions": [
+        "control",
+        "treatment"
+    ],
+    "read_files": {
+            "control": {
+	                "replicates": [
+	                    {
+			                        "read1": "/jsporter@patricbrc.org/home/Tn-Seq/Sassetti/SRR12246716_1.fastq",
+			                        "read2": "/jsporter@patricbrc.org/home/Tn-Seq/Sassetti/SRR12246716_2.fastq"
+			                    },
+	                    {
+			                        "read1": "/jsporter@patricbrc.org/home/Tn-Seq/Sassetti_ce_replicates/SRR12246714_1.fastq.gz",
+			                        "read2": "/jsporter@patricbrc.org/home/Tn-Seq/Sassetti_ce_replicates/SRR12246714_2.fastq.gz"
+			                    }
+	                ],
+	                "library": "control"
+	            },
+	            "treatment": {
+			                "replicates": [
+						                {
+								                    "read1": "/jsporter@patricbrc.org/home/Tn-Seq/Sassetti_ce_replicates/SRR12246701_1.fastq.gz",
+								                    "read2": "/jsporter@patricbrc.org/home/Tn-Seq/Sassetti_ce_replicates/SRR12246701_2.fastq.gz"
+								                },
+								                {
+										                    "read1": "/jsporter@patricbrc.org/home/Tn-Seq/Sassetti_ce_replicates/SRR12246702_1.fastq.gz",
+										                    "read2": "/jsporter@patricbrc.org/home/Tn-Seq/Sassetti_ce_replicates/SRR12246702_2.fastq.gz"
+										                }
+					            ],
+						                "library": "treatment"
+									        }
+	        },
+        "contrasts": [
+		        [
+			            "control",
+			            "treatment"
+			        ]
+				    ]
+}

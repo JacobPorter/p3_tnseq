@@ -302,15 +302,15 @@ def main(server_setup, job_data):
             sys.stderr.write("Missing "+ data +"\n")
             fail = True
     if "primer" not in job_data:
-        sys.stderr.write("The primer string does not exist.\n")
-        fail = True
+        sys.stderr.write("The primer string was not found.  Using default: ACTTATCAGCCAACCTGTTA.\n")
+        primer_string = "ACTTATCAGCCAACCTGTTA"
     else:
         primer_string = job_data["primer"].upper()
-        job_data["primer"] = primer_string
-        for char in primer_string:
-            if char not in ["A", "C", "T", "G", "N"]:
-                sys.stderr.write("The primer is not a DNA string.\n")
-                fail = True
+    job_data["primer"] = primer_string
+    for char in primer_string:
+        if char not in ["A", "C", "T", "G", "N"]:
+            sys.stderr.write("The primer is not a DNA string.\n")
+            fail = True
     # Could validate that the recipe and protocol make sense.
     print(job_data)
     if fail:

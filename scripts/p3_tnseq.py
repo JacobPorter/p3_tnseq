@@ -5,9 +5,15 @@ import requests
 import json
 import subprocess
 
-
+# Number of reads to use for approximating average read length.
 READ_LEN_SAMPLE = 10
+
+# Approximate length of barcode to remove from read 2 with paired end reads.
+# This is used to approximate read length.
 READ2_BARCODE = 30
+
+# If a contig has MIN_GENES number of genes or fewer, skip this contig.
+MIN_GENES = 5
 
 def get_genome(parameters):
     target_file = os.path.join(parameters["output_path"],parameters["gid"]+".fna")
@@ -112,6 +118,14 @@ def run_transit(genome_list, library_dict, parameters):
                 os.remove(os.path.join(output_path, contig + ".gff"))
             else:
                 annotation = genome["annotation"]
+            with open(annotation, "r") as contig_gff:
+                gene_count = 0
+                for line in contig_gff:
+                    if not line.startswith("#"):
+                        gene_count += 1
+                if gene_count <= MIN_GENES:
+                    print("Contig {} has {} genes in the annotation.  Skipping.".format(contig, gene_count))
+                    continue
             cmd=["transit", recipe]
             for contrast in contrasts:
                 if len(contig_ids) > 1:

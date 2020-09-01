@@ -43,7 +43,7 @@ deploy-venv:
 	rm -rf transit-deploy $(TARGET_VENV)
 	git clone $(TRANSIT_SRC) transit-deploy
 	python3 -m venv $(TARGET_VENV)
-	cd transit; . $(TARGET_VENV)/bin/activate; python3 setup.py install
+	cd transit-deploy; . $(TARGET_VENV)/bin/activate; python3 setup.py install
 
 deploy-specs:
 	mkdir -p $(TARGET)/services/$(APP_SERVICE)

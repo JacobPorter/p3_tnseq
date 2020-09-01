@@ -1,0 +1,26 @@
+{
+    "id": "sassetti_SRR12246716_t2_full",
+    "output_path": "/jsporter@patricbrc.org/home/Tn-Seq/Sassetti",
+    "output_file": "sassetti_test",
+    "recipe": "gumbel",
+    "reference_genome_id": "83332.12",
+    "experimental_conditions": [
+        "control"
+    ],
+    "read_files": {
+            "control": {
+	                "replicates": [
+	                    {
+			                        "read1": "/jsporter@patricbrc.org/home/Tn-Seq/Sassetti/SRR12246716_1.fastq",
+			                        "read2": "/jsporter@patricbrc.org/home/Tn-Seq/Sassetti/SRR12246716_2.fastq"
+			                    }
+	                ],
+	                "library": "control"
+	            }
+	        },
+        "contrasts": [
+		        [
+			            "control"
+			        ]
+				    ]
+}

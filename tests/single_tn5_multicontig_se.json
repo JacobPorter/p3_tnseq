@@ -1,0 +1,27 @@
+{
+    "id": "/jsporter@patricbrc.org/home/Tn-Seq/Tn5/ERR1370565.fastq",
+    "output_path": "/jsporter@patricbrc.org/home/Tn-Seq/Tn5",
+    "output_file": "tn5_test",
+    "recipe": "tn5gaps",
+    "protocol": "tn5",
+    "primer": "TAAGAGACAG",
+    "reference_genome_id": "28450.724",
+    "experimental_conditions": [
+        "control"
+    ],
+    "read_files": {
+            "control": {
+	                "replicates": [
+	                    {
+			                        "read": "/jsporter@patricbrc.org/home/Tn-Seq/Tn5/ERR1370565.fastq"
+			                    }
+	                ],
+	                "library": "control"
+	            }
+	        },
+        "contrasts": [
+		        [
+			            "control"
+			        ]
+				    ]
+}

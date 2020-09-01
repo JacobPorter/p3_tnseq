@@ -36,16 +36,16 @@ def get_genome(parameters):
             handle.write(block)
         handle.close()
 #         copy_file = os.path.join(parameters["output_path"],parameters["gid"]+"_2"+".fna")
-        contig_ids = []
 #         with open(copy_file, "w") as sink_file:
-        with open(target_file, "r") as source_file:
-            for line in source_file:
-                if line.startswith(">"):
-                    line = line.split()[0] + "\n"
-                    contig_ids.append(line[1:].strip())
 #                     sink_file.write(line)
 #         os.remove(target_file)
 #         os.rename(copy_file, target_file)
+    contig_ids = []
+    with open(target_file, "r") as source_file:
+        for line in source_file:
+            if line.startswith(">"):
+                line = line.split()[0] + "\n"
+                contig_ids.append(line[1:].strip())
     return target_file, contig_ids
 
 

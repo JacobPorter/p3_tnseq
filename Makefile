@@ -65,7 +65,7 @@ deploy-service-scripts:
 	        echo install $$src $$base ; \
 	        cp $$src $(TARGET)/pybin ; \
 	        $(WRAP_PYTHON3_SCRIPT) "$(TARGET)/pybin/$$basefile" $(TARGET)/bin/$$base ; \
-	done
+	done \
 	for src in $(SRC_SERVICE_PERL) ; do \
 	        basefile=`basename $$src`; \
 	        base=`basename $$src .pl`; \

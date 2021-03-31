@@ -141,13 +141,13 @@ sub process_tnseq
     print JDESC JSON::XS->new->pretty(1)->encode($params_to_app);
     close(JDESC);
 
-    my @cmd = ("p3_tnseq", "--jfile", $jdesc, "--sstring", $sstring, "-o", $work_dir,
-	       ">", "$work_dir/tnseq.out.txt",
-	       "2>", "$work_dir/tnseq.err.txt");
+    my @cmd = ("p3_tnseq", "--jfile", $jdesc, "--sstring", $sstring, "-o", $work_dir);
 
     warn Dumper(\@cmd, $params_to_app);
     
-    my $ok = run(\@cmd);
+    my $ok = run(\@cmd,
+		 ">", "$work_dir/tnseq.out.txt",
+		 "2>", "$work_dir/tnseq.err.txt");
     if (!$ok)
     {
 	die "Command failed: @cmd\n";

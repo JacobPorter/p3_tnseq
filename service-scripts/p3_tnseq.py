@@ -21,23 +21,25 @@ MIN_GENES = 5
 
 
 def get_genome(parameters):
-    target_file = os.path.join(parameters["output_path"],
-                               parameters["gid"] + ".fna")
+    target_file = os.path.join(parameters["output_path"], parameters["gid"] + ".fna")
     if not os.path.exists(target_file):
         # .replace("data_url",parameters["data_url"]).replace("gid",parameters["gid"])
-        genome_url = "{data_url}/genome_sequence/?eq(genome_id,{gid})&limit(25000)".format(
-            data_url=parameters["data_url"], gid=parameters["gid"])
+        genome_url = (
+            "{data_url}/genome_sequence/?eq(genome_id,{gid})&limit(25000)".format(
+                data_url=parameters["data_url"], gid=parameters["gid"]
+            )
+        )
         print(genome_url)
         headers = {"accept": "application/sralign+dna+fasta"}
         # print "switch THE HEADER BACK!"
-        #headers = {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'}
-        req = requests.Request('GET', genome_url, headers=headers)
+        # headers = {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'}
+        req = requests.Request("GET", genome_url, headers=headers)
         authenticateByEnv(req)
         prepared = req.prepare()
         # pretty_print_POST(prepared)
         s = requests.Session()
         response = s.send(prepared)
-        handle = open(target_file, 'wb')
+        handle = open(target_file, "wb")
         if not response.ok:
             sys.stderr.write("API not responding. Please try again later.\n")
             sys.exit(2)
@@ -45,12 +47,11 @@ def get_genome(parameters):
             handle.write(block)
         handle.close()
 
-
-#         copy_file = os.path.join(parameters["output_path"],parameters["gid"]+"_2"+".fna")
-#         with open(copy_file, "w") as sink_file:
-#                     sink_file.write(line)
-#         os.remove(target_file)
-#         os.rename(copy_file, target_file)
+    #         copy_file = os.path.join(parameters["output_path"],parameters["gid"]+"_2"+".fna")
+    #         with open(copy_file, "w") as sink_file:
+    #                     sink_file.write(line)
+    #         os.remove(target_file)
+    #         os.rename(copy_file, target_file)
     contig_ids = []
     with open(target_file, "r") as source_file:
         for line in source_file:
@@ -64,24 +65,25 @@ def get_genome(parameters):
 
 
 def get_annotation(parameters):
-    target_file = os.path.join(parameters["output_path"],
-                               parameters["gid"] + ".gff")
+    target_file = os.path.join(parameters["output_path"], parameters["gid"] + ".gff")
     if not os.path.exists(target_file):
         annotation_url = "data_url/genome_feature/?and(eq(genome_id,gid),eq(annotation,PATRIC),or(eq(feature_type,CDS),eq(feature_type,tRNA),eq(feature_type,rRNA)))&limit(25000)".replace(
-            "data_url",
-            parameters["data_url"]).replace("gid", parameters["gid"])
+            "data_url", parameters["data_url"]
+        ).replace(
+            "gid", parameters["gid"]
+        )
         print(annotation_url)
         headers = {"accept": "application/gff"}
         # headers = {"accept":"application/cufflinks+gff"}
         # print "switch THE HEADER BACK!"
-        #headers = {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'}
-        req = requests.Request('GET', annotation_url, headers=headers)
+        # headers = {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'}
+        req = requests.Request("GET", annotation_url, headers=headers)
         authenticateByEnv(req)
         prepared = req.prepare()
         # pretty_print_POST(prepared)
         s = requests.Session()
         response = s.send(prepared)
-        handle = open(target_file, 'wb')
+        handle = open(target_file, "wb")
         if not response.ok:
             sys.stderr.write("API not responding. Please try again later.\n")
             sys.exit(2)
@@ -116,13 +118,13 @@ def run_transit(genome_list, library_dict, parameters):
     #
     # grep CZJJ01000038 197.5220.gff | sort -nk4 > CZJJ01000038.gff
     valid_recipes = {
-        'griffin': 1,
-        'tn5gaps': 1,
-        'rankproduct': 1,
-        'hmm': 1,
-        'binomial': 1,
-        'gumbel': 1,
-        'resampling': 1
+        "griffin": 1,
+        "tn5gaps": 1,
+        "rankproduct": 1,
+        "hmm": 1,
+        "binomial": 1,
+        "gumbel": 1,
+        "resampling": 1,
     }
     recipe = parameters["recipe"]
     if not valid_recipes[recipe]:
@@ -133,17 +135,20 @@ def run_transit(genome_list, library_dict, parameters):
         for contig in contig_ids:
             if len(contig_ids) > 1:
                 annotation = os.path.join(output_path, contig + ".sorted.gff")
-                with open(os.path.join(output_path, contig + ".gff"),
-                          "w") as contig_gff:
-                    subprocess.check_call(
-                        ["grep", contig, genome["annotation"]],
-                        stdout=contig_gff)
+                with open(
+                    os.path.join(output_path, contig + ".gff"), "w"
+                ) as contig_gff:
+                    try:
+                        subprocess.check_call(
+                            ["grep", contig, genome["annotation"]], stdout=contig_gff
+                        )
+                    except subprocess.CalledProcessError:
+                        pass
                 with open(annotation, "w") as contig_sorted_gff:
-                    subprocess.check_call([
-                        "sort", "-nk4",
-                        os.path.join(output_path, contig + ".gff")
-                    ],
-                                          stdout=contig_sorted_gff)
+                    subprocess.check_call(
+                        ["sort", "-nk4", os.path.join(output_path, contig + ".gff")],
+                        stdout=contig_sorted_gff,
+                    )
                 os.remove(os.path.join(output_path, contig + ".gff"))
             else:
                 annotation = genome["annotation"]
@@ -154,19 +159,22 @@ def run_transit(genome_list, library_dict, parameters):
                         gene_count += 1
                 if gene_count <= MIN_GENES:
                     print(
-                        "Contig {} has {} genes in the annotation.  Skipping.".
-                        format(contig, gene_count))
+                        "Contig {} has {} genes in the annotation.  Skipping.".format(
+                            contig, gene_count
+                        )
+                    )
                     continue
             cmd = ["transit", recipe]
             for contrast in contrasts:
                 if len(contig_ids) > 1:
                     output_file = os.path.join(
-                        output_path, "_".join([recipe] + contrast) + "_" +
-                        contig + "_transit.txt")
+                        output_path,
+                        "_".join([recipe] + contrast) + "_" + contig + "_transit.txt",
+                    )
                 else:
                     output_file = os.path.join(
-                        output_path,
-                        "_".join([recipe] + contrast) + "_transit.txt")
+                        output_path, "_".join([recipe] + contrast) + "_transit.txt"
+                    )
                 cur_cmd = list(cmd)  # make a copy
                 control_files = []
                 exp_files = []
@@ -202,9 +210,10 @@ def handle_gzip(file_path):
     if file_path.endswith(".gz"):
         if os.path.isfile(file_path):
             subprocess.check_call(["gunzip", file_path])
-        file_path = file_path[0:len(file_path) - 3]
-    sys.stderr.write("File {} has size {}.\n".format(
-        file_path, os.path.getsize(file_path)))
+        file_path = file_path[0 : len(file_path) - 3]
+    sys.stderr.write(
+        "File {} has size {}.\n".format(file_path, os.path.getsize(file_path))
+    )
     sys.stderr.flush()
     return file_path
 
@@ -229,10 +238,10 @@ def read_length_estimate(file_path, primer, f_factor=0):
     try:
         return max(
             10,
-            sum([
-                len(r) if primer not in r else len(r) - len(primer)
-                for r in reads
-            ]) / len(reads) - f_factor)
+            sum([len(r) if primer not in r else len(r) - len(primer) for r in reads])
+            / len(reads)
+            - f_factor,
+        )
     except ZeroDivisionError:
         sys.stderr.write(str(reads))
         raise ZeroDivisionError
@@ -241,25 +250,29 @@ def read_length_estimate(file_path, primer, f_factor=0):
 def run_alignment(genome_list, library_dict, parameters):
     # modifies library_dict sub replicates to include 'bowtie' dict recording output files
     output_path = parameters["output_path"]
-    key_handle = open(
-        os.path.join(parameters["output_path"], "output_keys.txt"), 'w')
+    key_handle = open(os.path.join(parameters["output_path"], "output_keys.txt"), "w")
     for genome in genome_list:
         contig_ids = genome["contig_ids"]
         contig_ids_str = ",".join(contig_ids)
-        genome_link = os.path.join(output_path,
-                                   os.path.basename(genome["genome"]))
+        genome_link = os.path.join(output_path, os.path.basename(genome["genome"]))
         final_cleanup = []
         if not os.path.exists(genome_link):
             subprocess.check_call(["ln", "-s", genome["genome"], genome_link])
         bwa_loc = str(
-            subprocess.run(["which", "bwa"], capture_output=True).stdout,
-            'utf-8').strip()
+            subprocess.run(["which", "bwa"], capture_output=True).stdout, "utf-8"
+        ).strip()
         if bwa_loc.startswith("which"):
             raise LookupError
         sys.stderr.write("Using BWA located at: {}\n".format(bwa_loc))
         sys.stderr.flush()
         # bwa_loc = "/opt/patric-common/runtime/bin/bwa"
-        cmd = ["tpp", "-bwa", bwa_loc, "-ref", genome["genome"]]
+        cmd = [
+            "tpp",
+            "-bwa",
+            bwa_loc,
+            "-ref",
+            genome["genome"],
+        ]
         # thread_count=multiprocessing.cpu_count()
         # cmd+=["-p",str(thread_count)]
         # if genome["dir"].endswith('/'):
@@ -282,12 +295,14 @@ def run_alignment(genome_list, library_dict, parameters):
                 r2_len = None
                 if "read2" in r:
                     r["read2"] = handle_gzip(r["read2"])
-                    r2_len = read_length_estimate(r["read2"],
-                                                  parameters["primer"],
-                                                  READ2_BARCODE)
+                    r2_len = read_length_estimate(
+                        r["read2"], parameters["primer"], READ2_BARCODE
+                    )
                 sys.stdout.write(
-                    "Approximate average reads 1 length: {}; reads 2 length: {}.\n"
-                    .format(r1_len, r2_len))
+                    "Approximate average reads 1 length: {}; reads 2 length: {}.\n".format(
+                        r1_len, r2_len
+                    )
+                )
                 sys.stdout.flush()
                 if r2_len is not None:
                     r_est = (r1_len + r2_len) / 2.0
@@ -297,28 +312,21 @@ def run_alignment(genome_list, library_dict, parameters):
                 if r_est <= 70:
                     alg = "aln"
                 if "read2" in r:
-                    read_link1 = os.path.join(output_path,
-                                              os.path.basename(r["read1"]))
-                    read_link2 = os.path.join(output_path,
-                                              os.path.basename(r["read2"]))
+                    read_link1 = os.path.join(output_path, os.path.basename(r["read1"]))
+                    read_link2 = os.path.join(output_path, os.path.basename(r["read2"]))
                     if not os.path.exists(read_link1):
-                        subprocess.check_call(
-                            ["ln", "-s", r["read1"], read_link1])
+                        subprocess.check_call(["ln", "-s", r["read1"], read_link1])
                     if not os.path.exists(read_link2):
-                        subprocess.check_call(
-                            ["ln", "-s", r["read2"], read_link2])
+                        subprocess.check_call(["ln", "-s", r["read2"], read_link2])
                     cur_cmd += ["-reads1", read_link1, "-reads2", read_link2]
                     name1 = os.path.splitext(os.path.basename(r["read1"]))[0]
                     name2 = os.path.splitext(os.path.basename(r["read2"]))[0]
-                    key_handle.write("\t".join([name1, name2, result_name]) +
-                                     "\n")
+                    key_handle.write("\t".join([name1, name2, result_name]) + "\n")
                     base_name = os.path.join(target_dir, result_name)
                 else:
-                    read_link1 = os.path.join(output_path,
-                                              os.path.basename(r["read1"]))
+                    read_link1 = os.path.join(output_path, os.path.basename(r["read1"]))
                     if not os.path.exists(read_link1):
-                        subprocess.check_call(
-                            ["ln", "-s", r["read1"], read_link1])
+                        subprocess.check_call(["ln", "-s", r["read1"], read_link1])
                     cur_cmd += ["-reads1", read_link1]
                     name1 = os.path.splitext(os.path.basename(r["read1"]))[0]
                     key_handle.write("\t".join([name1, result_name]) + "\n")
@@ -329,43 +337,51 @@ def run_alignment(genome_list, library_dict, parameters):
                 bam_file = sam_file[:-4] + ".bam"
                 r[genome["genome"]] = {}
                 r[genome["genome"]]["bam"] = bam_file
-                r[genome["genome"]]["wig"] = {
-                    contig_ids[0]: wig_file
-                } if len(contig_ids) <= 1 else {
-                    contig_id: "{}_{}.wig".format(base_name, contig_id)
-                    for contig_id in contig_ids
-                }
+                r[genome["genome"]]["wig"] = (
+                    {contig_ids[0]: wig_file}
+                    if len(contig_ids) <= 1
+                    else {
+                        contig_id: "{}_{}.wig".format(base_name, contig_id)
+                        for contig_id in contig_ids
+                    }
+                )
                 cur_cmd += ["-output", base_name]
                 cur_cmd += [
-                    "-protocol", parameters["protocol"], "-bwa-alg", alg,
-                    "-primer", parameters["primer"], "-replicon-ids",
-                    contig_ids_str
+                    "-protocol",
+                    parameters["protocol"],
+                    "-bwa-alg",
+                    alg,
+                    "-primer",
+                    parameters["primer"],
+                    "-replicon-ids",
+                    contig_ids_str,
                 ]
                 if os.path.exists(bam_file):
                     sys.stderr.write(
-                        bam_file +
-                        " alignments file already exists. skipping\n")
+                        bam_file + " alignments file already exists. skipping\n"
+                    )
                 else:
                     print(" ".join(cur_cmd))
                     sys.stdout.flush()
                     subprocess.check_call(cur_cmd)
 
-
-#                     if len(contig_ids) > 1:
-#                         cat_cmd = ["cat"] + [r[genome["genome"]]["wig"][contig] for contig in contig_ids]
-#                         # cat_cmd += [">", wig_file]
-#                         with open(wig_file, "w") as wig_fd:
-#                             subprocess.run(cat_cmd, stdout=wig_fd)
-#                 r[genome["genome"]]["wig"] = wig_file
+                #                     if len(contig_ids) > 1:
+                #                         cat_cmd = ["cat"] + [r[genome["genome"]]["wig"][contig] for contig in contig_ids]
+                #                         # cat_cmd += [">", wig_file]
+                #                         with open(wig_file, "w") as wig_fd:
+                #                             subprocess.run(cat_cmd, stdout=wig_fd)
+                #                 r[genome["genome"]]["wig"] = wig_file
                 if not os.path.exists(bam_file):
                     # subprocess.check_call("samtools view -Su "+sam_file+" | samtools sort -o - - > "+bam_file, shell=True)#convert to bam
                     bam_out = open(bam_file, "w")
                     p1 = subprocess.Popen(
-                        ["samtools", "view", "-Su", sam_file],
-                        stdout=subprocess.PIPE)
-                    p2 = subprocess.Popen(["samtools", "sort", "-o", "-", "-"],
-                                          stdout=bam_out,
-                                          stdin=p1.stdout)
+                        ["samtools", "view", "-Su", sam_file], stdout=subprocess.PIPE
+                    )
+                    p2 = subprocess.Popen(
+                        ["samtools", "sort", "-o", "-", "-"],
+                        stdout=bam_out,
+                        stdin=p1.stdout,
+                    )
                     p1.stdout.close()
                     output = p2.communicate()
                     bam_out.close()
@@ -375,8 +391,8 @@ def run_alignment(genome_list, library_dict, parameters):
                     print("view status = %d" % p1_stat)
                     print("sort status = %d" % p2_stat)
                     subprocess.check_call(["samtools", "index", bam_file])
-                    #subprocess.check_call('samtools view -S -b %s > %s' % (sam_file, bam_file+".tmp"), shell=True)
-                    #subprocess.check_call('samtools sort %s %s' % (bam_file+".tmp", bam_file), shell=True)
+                    # subprocess.check_call('samtools view -S -b %s > %s' % (sam_file, bam_file+".tmp"), shell=True)
+                    # subprocess.check_call('samtools sort %s %s' % (bam_file+".tmp", bam_file), shell=True)
                 for garbage in cur_cleanup:
                     if os.path.exists(garbage):
                         subprocess.call(["rm", garbage])
@@ -387,8 +403,12 @@ def run_alignment(genome_list, library_dict, parameters):
 
 def main(server_setup, job_data):
     required_data = [
-        "experimental_conditions", "read_files", "reference_genome_id",
-        "recipe", "contrasts", "protocol"
+        "experimental_conditions",
+        "read_files",
+        "reference_genome_id",
+        "recipe",
+        "contrasts",
+        "protocol",
     ]
     fail = False
     for data in required_data:
@@ -412,8 +432,7 @@ def main(server_setup, job_data):
     if fail:
         sys.exit(2)
     # library_list=job_data["experimental_conditions"]
-    output_path = job_data["output_path"] = os.path.abspath(
-        job_data["output_path"])
+    output_path = job_data["output_path"] = os.path.abspath(job_data["output_path"])
     # for lib in library_list:
     #    library_dict[lib]={"library":lib}
     # job_data["read_files"]=job_data["read_files"].split()
@@ -438,25 +457,21 @@ def main(server_setup, job_data):
             "annotation": [],
             "dir": g,
             "contig_ids": contig_ids[i],
-            "hisat_index": []
+            "hisat_index": [],
         }
         for f in os.listdir(g):
             if f.endswith(".fna") or f.endswith(".fa") or f.endswith(".fasta"):
-                cur_genome["genome"].append(os.path.abspath(os.path.join(g,
-                                                                         f)))
+                cur_genome["genome"].append(os.path.abspath(os.path.join(g, f)))
             elif f.endswith(".gff"):
-                cur_genome["annotation"].append(
-                    os.path.abspath(os.path.join(g, f)))
+                cur_genome["annotation"].append(os.path.abspath(os.path.join(g, f)))
 
         if len(cur_genome["genome"]) != 1:
-            sys.stderr.write("Too many or too few fasta files present in " +
-                             g + "\n")
+            sys.stderr.write("Too many or too few fasta files present in " + g + "\n")
             sys.exit(2)
         else:
             cur_genome["genome"] = cur_genome["genome"][0]
         if len(cur_genome["annotation"]) != 1:
-            sys.stderr.write("Too many or too few gff files present in " + g +
-                             "\n")
+            sys.stderr.write("Too many or too few gff files present in " + g + "\n")
             sys.exit(2)
         else:
             cur_genome["annotation"] = cur_genome["annotation"][0]
@@ -474,29 +489,27 @@ def main(server_setup, job_data):
     sys.stderr.write("TPP is finished.\n")
     sys.stderr.flush()
     run_transit(genome_list, library_dict, job_data)
-    #cleanup(genome_list, library_dict, parameters, output_path)
+    # cleanup(genome_list, library_dict, parameters, output_path)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     jobinfo = parser.add_mutually_exclusive_group(required=True)
     jobinfo.add_argument(
-        '--jfile',
-        help=
-        'json file for job {"reference_genome_id":[x],"experimental_conditions":[x], "transit_params":{key:value}, "output_path":x, "read_files":x'
+        "--jfile",
+        help='json file for job {"reference_genome_id":[x],"experimental_conditions":[x], "transit_params":{key:value}, "output_path":x, "read_files":x',
     )
-    jobinfo.add_argument('--jstring', help='json string from user input')
+    jobinfo.add_argument("--jstring", help="json string from user input")
     serverinfo = parser.add_mutually_exclusive_group(required=True)
-    serverinfo.add_argument('--sfile', help='server setup JSON file')
-    serverinfo.add_argument('--sstring', help='server setup JSON string')
+    serverinfo.add_argument("--sfile", help="server setup JSON file")
+    serverinfo.add_argument("--sstring", help="server setup JSON string")
     parser.add_argument(
-        '-o',
-        help='output directory. defaults to current directory.',
-        required=False)
-    #parser.add_argument('-g', help='genome ids to get *.fna and annotation *.gff', required=True)
-    #parser.add_argument('-L', help='csv list of library names for comparison', required=True)
-    #parser.add_argument('-p', help='JSON formatted parameter list for TRANSIT keyed to program', required=True)
-    #parser.add_argument('-o', help='output directory. defaults to current directory.', required=False)
+        "-o", help="output directory. defaults to current directory.", required=False
+    )
+    # parser.add_argument('-g', help='genome ids to get *.fna and annotation *.gff', required=True)
+    # parser.add_argument('-L', help='csv list of library names for comparison', required=True)
+    # parser.add_argument('-p', help='JSON formatted parameter list for TRANSIT keyed to program', required=True)
+    # parser.add_argument('-o', help='output directory. defaults to current directory.', required=False)
     # parser.add_argument('readfiles', nargs='+', help="whitespace sep list of read files. shoudld be \
     #        ws separates control (first) from experiment files (second),\
     #        a comma separates replicates, and a percent separates pairs.")
@@ -505,19 +518,25 @@ if __name__ == "__main__":
         sys.exit(2)
     args = parser.parse_args()
     try:
-        job_data = json.loads(args.jstring) if args.jstring else json.load(
-            open(args.jfile, 'r'))
+        job_data = (
+            json.loads(args.jstring)
+            if args.jstring
+            else json.load(open(args.jfile, "r"))
+        )
     except:
         sys.stderr.write("Failed to parse user provided form data \n")
         raise
     # parse setup data
     try:
-        server_setup = json.loads(args.sstring) if args.sstring else json.load(
-            open(args.sfile, 'r'))
+        server_setup = (
+            json.loads(args.sstring)
+            if args.sstring
+            else json.load(open(args.sfile, "r"))
+        )
     except:
         sys.stderr.write("Failed to parse server data\n")
         raise
-    if 'data_api' in server_setup and (not 'data_url' in server_setup):
-        server_setup['data_url'] = server_setup['data_api']
+    if "data_api" in server_setup and (not "data_url" in server_setup):
+        server_setup["data_url"] = server_setup["data_api"]
     job_data["output_path"] = args.o
     main(server_setup, job_data)

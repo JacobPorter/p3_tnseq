@@ -180,24 +180,32 @@ def run_transit(genome_list, library_dict, parameters):
                 exp_files = []
                 condition = contrast[0]
                 for r in library_dict[condition]["replicates"]:
-                    control_files.append(r[genome["genome"]]["wig"][contig])
+                    f = r[genome["genome"]]["wig"][contig]
+                    if os.path.isfile(f):
+                        control_files.append(f)
+                    else:
+                        print("File {} not found.".format(f), file=sys.stderr)
                     # control_files.append(r[genome["genome"]]["wig"])
                 if len(contrast) == 2:
                     condition = contrast[1]
                     for r in library_dict[condition]["replicates"]:
-                        exp_files.append(r[genome["genome"]]["wig"][contig])
+                        f = r[genome["genome"]]["wig"][contig]
+                        if os.path.isfile(f):
+                            exp_files.append(f)
+                        else:
+                            print("File {} not found.".format(f), file=sys.stderr)
                         # exp_files.append(r[genome["genome"]]["wig"])
                 if len(control_files) > 0:
                     cur_cmd.append(",".join(control_files))
                 else:
-                    sys.stderr.write("Missing control files for " + recipe)
-                    sys.exit(2)
+                    print("Missing control files for " + recipe, file=sys.stderr)
+                    continue
                 if recipe == "resampling":
                     if len(exp_files) > 0:
                         cur_cmd.append(",".join(exp_files))
                     else:
-                        sys.stderr.write("Missing exp files for " + recipe)
-                        sys.exit(2)
+                        print("Missing exp files for " + recipe, file=sys.stderr)
+                        continue
                 # cur_cmd.append(genome["annotation"])
                 cur_cmd.append(annotation)
                 cur_cmd.append(output_file)

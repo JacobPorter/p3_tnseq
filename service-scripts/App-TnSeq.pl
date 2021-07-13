@@ -90,7 +90,7 @@ sub process_tnseq
 	    {
 		$repinst->{read1} = delete $repinst->{read};
 	    }
-	    
+
 	    for my $rd (qw(read1 read2))
 	    {
 		if (exists($repinst->{$rd}))
@@ -144,10 +144,12 @@ sub process_tnseq
     my @cmd = ("p3_tnseq", "--jfile", $jdesc, "--sstring", $sstring, "-o", $work_dir);
 
     warn Dumper(\@cmd, $params_to_app);
-    
-    my $ok = run(\@cmd,
-		 ">", "$work_dir/tnseq.out.txt",
-		 "2>", "$work_dir/tnseq.err.txt");
+
+    my $ok = run(\@cmd);
+
+    # my $ok = run(\@cmd,
+	# 	 ">", "$work_dir/tnseq.out.txt",
+	# 	 "2>", "$work_dir/tnseq.err.txt");
     if (!$ok)
     {
 	die "Command failed: @cmd\n";
@@ -180,7 +182,7 @@ sub process_tnseq
 	    {
 		my $path = "$output_folder/$file";
 		my $type = $suf->[1];
-		
+
 		$app->workspace->save_file_to_file("$work_dir/$file", {}, "$output_folder/$file", $type, 1,
 					       (-s "$work_dir/$file" > 10_000 ? 1 : 0), # use shock for larger files
 					       $token);
